@@ -269,6 +269,25 @@ class RequestPasswordReset extends \Filament\Pages\Auth\PasswordReset\RequestPas
 }
 ```
 
+And then add this class into the admin panel provider:-
+
+```php
+use App\Filament\Resources\Auth\RequestPasswordReset;
+
+class AdminPanelProvider extends PanelProvider
+{
+    public function panel(Panel $panel): Panel
+    {
+        return $panel
+            ->default()
+            ->id('admin')
+            ->path('admin')
+            ->plugins([
+                EmailTemplatesPlugin::make(),
+            ])
+            ->passwordReset(RequestPasswordReset::class)
+```
+
 ### User Password Reset Success Notification
 
 ```php

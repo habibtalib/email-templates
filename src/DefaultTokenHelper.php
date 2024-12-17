@@ -20,36 +20,40 @@ class DefaultTokenHelper implements TokenReplacementInterface
      */
     public function replaceTokens(string $content, $models): string
     {
+        $content = $this->replaceSingularTokens($models, $content);
 
+        $content = $this->replaceConfigTokens($models,$content);
+
+        $content = $this->replaceModelTokens($models, $content);
+
+        return $this->replaceButtonTokens($models, $content);
+    }
+
+
+
+    /**
+     *
+     * @return string
+     */
+    protected function replaceSingularTokens( $models, string $content): string
+    {
         /**
          * Replace singular tokens for password reset and validations
          * Add custom tokens in the config
          */
-        foreach (config('filament-email-templates.known_tokens') as $key){
+        foreach (config('filament-email-templates.known_tokens') as $key) {
             if (isset($models->{$key})) {
                 $content = str_replace("##$key##", $models->{$key}, $content);
             }
         }
+        return $content;
+    }
 
-        /**
-         * Replace model-attribute tokens.
-         * Will look for pattern ##model.attribute## and replace the value if found.
-         * Eg ##user.name## or create your own accessors in a model
-         */
-        preg_match_all('/##(.*?)\.(.*?)##/', $content, $matches);
-
-        if (count($matches) > 0 && count($matches[0]) > 0) {
-            for ($i = 0; $i < count($matches[0]); $i++) {
-                $modelKey = $matches[1][$i];
-                $attributeKey = $matches[2][$i];
-                $replacement = (isset($models->$modelKey) && isset($models->$modelKey->$attributeKey))?$models->$modelKey->$attributeKey:"";
-                $content = str_replace($matches[0][$i], $replacement, $content);
-
-            }
-        }
-
+    protected function replaceConfigTokens( $models, string $content): string
+    {
         /**
          * Replace config tokens.
+         *
          * Define which tokens are allowed in this config setting
          */
         $allowedConfigKeys = config('filament-email-templates.config_keys');
@@ -67,20 +71,36 @@ class DefaultTokenHelper implements TokenReplacementInterface
             }
         }
 
-
-        if(isset($models->emailTemplate)){
-            $button = $this->buildEmailButton($content, $models->emailTemplate);
-            $content = self::replaceButtonToken($content, $button);
-        }
-
-
         return $content;
     }
 
-    private function buildEmailButton($content, $emailTemplate)
+    protected function replaceModelTokens( $models, string $content): string
     {
+        /**
+         * Replace model-attribute tokens.
+         * Will look for pattern ##model.attribute## and replace the value if found.
+         * Eg ##user.name## or create your own accessors in a model
+         */
+        preg_match_all('/##(?!config\.)([^.#]+)\.(.*?)##/', $content, $matches);
+
+        if (count($matches) > 0 && count($matches[0]) > 0) {
+            for ($i = 0; $i < count($matches[0]); $i++) {
+                $modelKey = $matches[1][$i];
+                $attributeKey = $matches[2][$i];
+                $replacement = (isset($models->$modelKey) && isset($models->$modelKey->$attributeKey))?$models->$modelKey->$attributeKey:"";
+                $content = str_replace($matches[0][$i], $replacement, $content);
+
+            }
+        }
+        return $content;
+    }
+
+    private function buildEmailButton($content, $emailTemplate): string
+    {
+        $content = str_replace('&#039;', "'", $content);
+
         $title = $url = '';
-        if (preg_match('/(?<=##button).*?(?=#)/', $content, $matches)) {
+        if (preg_match('/\{\{button.*?\}\}/', $content, $matches)) {
             if ($check1 = preg_match("/(?<=url=').*?(?='\s)/", $matches[ 0 ], $url)) {
                 $url = $url[ 0 ];
             }
@@ -90,24 +110,45 @@ class DefaultTokenHelper implements TokenReplacementInterface
             if ($check1 && $check2) {
 
                 return View::make('vb-email-templates::email.parts._button', [
-                    'url' => $url,
-                    'title' => $title,
-                    'data' => ['theme' => $emailTemplate->theme->colours],
+                        'url' => $url,
+                        'title' => $title,
+                        'data' => ['theme' => $emailTemplate->theme->colours],
                 ])
-                    ->render();
+                        ->render();
             }
         };
 
         return '';
     }
 
-    private static function replaceButtonToken($content, $button)
+    /**
+     * @param  array|string  $content
+     *
+     * @return string
+     */
+    protected function replaceButtonTokens( $models, string $content): string
     {
-        $search = "/(?<=##button).*?(?=##)/";
-        $replace = "";
-        $content = preg_replace($search, $replace, $content);
-        $content = str_replace('##button##', $button, $content);
+        /**
+         *Replace {{button url='xxx' title='xxx'}}
+         */
+
+        if (isset($models->emailTemplate)) {
+            $button = $this->buildEmailButton($content, $models->emailTemplate);
+            $content = self::replaceButtonToken($content, $button);
+        }
 
         return $content;
     }
+
+
+    private static function replaceButtonToken($content, $button)
+    {
+        // Search pattern to find the new button format
+        $search = "/\{\{button.*?\}\}/";
+        // Replace the found button token with the actual button HTML
+        $content = preg_replace($search, $button, $content);
+
+        return $content;
+    }
+
 }

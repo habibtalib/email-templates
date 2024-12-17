@@ -46,7 +46,7 @@ it('can replace tokens in user password reset request email', function () {
             'preheader' => 'Reset Password',
             'content' => "<p>Hello ##user.name##,</p>
                             <p>You are receiving this email because we received a password reset request for your account.</p>
-                            <div>##button url='##tokenURL##' title='Change My Password'##</div>
+                            <div>{{button url='##tokenUrl##' title='Change My Password'}}</div>
                             <p>If you didn't request this password reset, no further action is needed. However if this has happened more than once in a short space of time, please let us know.</p>
                             <p>We'll never ask for your credentials over the phone or by email and you should never share your credentials</p>
                             <p>If you’re having trouble clicking the 'Change My Password' button, copy and paste the URL below into your web browser:</p>
@@ -127,7 +127,7 @@ it('can replace tokens in user verify email', function () {
             'content' => "<p>Dear ##user.name##,</p>
                             <p>Your receiving this email because your email address has been registered on ##config.app.name##.</p>
                             <p>To activate your account please click the button below.</p>
-                            <div>##button url='##verificationUrl##' title='Verify Email Address'##</div>
+                            <div>{{button url='##verificationUrl##' title='Verify Email Address'}}</div>
                             <p>If you’re having trouble clicking the 'Verify Email Address' button, copy and paste the URL below into your web browser:</p>
                             <p><a href='##verificationUrl##'>##verificationUrl##</a></p>
                             <p>Kind Regards,<br>##config.app.name##</p>",
